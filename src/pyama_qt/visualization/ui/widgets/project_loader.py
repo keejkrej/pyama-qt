@@ -159,9 +159,6 @@ class ProjectLoader(QWidget):
     def start_progress(self, message: str) -> None:
         self.progress_bar.setRange(0, 0)  # Indeterminate/busy
 
-    def update_progress_message(self, message: str) -> None:
-        pass
-
     def finish_progress(self) -> None:
         # Return to idle state but keep visible
         self.progress_bar.setRange(0, 1)

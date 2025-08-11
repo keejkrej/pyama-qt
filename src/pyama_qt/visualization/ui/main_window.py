@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QMessageBox, QFileDialog
 )
 from PySide6.QtCore import Signal, QThread
+import logging
 from pathlib import Path
 import math
 
@@ -29,6 +30,13 @@ class VisualizationMainWindow(QMainWindow):
         self._worker: PreprocessingWorker | None = None
         # Shared image cache used by worker and viewer
         self._image_cache: dict = {}
+        # Set up a basic console logger if none configured
+        self.logger = logging.getLogger(__name__)
+        if not logging.getLogger().handlers:
+            logging.basicConfig(
+                level=logging.INFO,
+                format='%(asctime)s - %(levelname)s - %(message)s'
+            )
         self.setup_ui()
         self.setup_statusbar()
         
@@ -168,8 +176,8 @@ class VisualizationMainWindow(QMainWindow):
 
         # Wire signals to the image viewer handlers
         self._worker_thread.started.connect(self._worker.process_fov_data)
-        # Route progress to the loader's progress bar
-        self._worker.progress_updated.connect(self.project_loader.update_progress_message)
+        # Route progress updates to console logger
+        self._worker.progress_updated.connect(self._on_worker_progress_logged)
         self._worker.fov_data_loaded.connect(self.image_viewer._on_fov_data_loaded)
         # Also react here to load traces CSV and populate the trace viewer (limit to first 10 for now)
         self._worker.fov_data_loaded.connect(self._on_fov_ready)
@@ -183,6 +191,10 @@ class VisualizationMainWindow(QMainWindow):
         # Start and show progress in loader
         self.project_loader.start_progress(f"Loading FOV {fov_idx:04d}...")
         self._worker_thread.start()
+
+    def _on_worker_progress_logged(self, message: str) -> None:
+        """Log worker progress messages to the console."""
+        self.logger.info(message)
 
     def _cleanup_worker(self) -> None:
         """Tear down worker and thread safely."""
